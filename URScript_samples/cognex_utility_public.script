@@ -1,0 +1,221 @@
+## cognex_utility.script ##
+## for: a project ##
+## Phillip Grambo ##
+## 6/21/2022 ##
+
+##########################################
+### documention ##########################
+##########################################
+
+# purpose: create script functions so that the cognex cameras can be used easily for a scan tunnel
+
+# example IP addresses: 
+# side cam 1 (near the robot): 192.168.0.10
+# side cam 2 (near the electrical pannel): 192.168.0.11
+# top cam: 192.168.0.12
+# bottom cam: 192.168.0.13
+
+# NOTE: the top and side cameras are all the same. Model is DataMan 375
+# dataman setup tool link: https://urldefense.com/v3/__https://www.cognex.com/products/leading-technology/dataman-setup-tool-software__;!!GenOTVeOfQ!W80Ed1DeaHJV9yHbQTN0ZKHDOclFOTr_2d6c27N9iw8HpO_tdrml_F9tWSNZpzoiVT3-Gi-1jStz_rmWyTzEhV-lMLliHMMlSw$ [cognex[.]com]
+
+# NOTE: the bottom camera is a different model and uses different software
+
+# at the begining of the robot program, in the before start sequence, you need to open a socket to the cameras individually
+# use the following commands:
+# socket_open("ip_address", port_num, "socket_name")
+# use port number 23 (the telnet port)
+# socket_attempt_A = socket_open(IP,port,"name") will assign socket_attempt_A to true if the socket was successfully opened
+# it may take a second to open the socket. You may want to set up a retry loop that tries a few times to open it, and stops the program if uncussessful
+# example command to opend a socket:
+# TopCamSocketInit = socket_open("192.168.0.12", 23, "TopCamSocket")
+
+# to trigger the DataMan cameras, the following commands are used:
+# ||>TRIGGER ON and ||>TRIGGER OFF
+# the vertical bars and side carrot are required. the default UR keyboard does not have the "|" character. To be able to type these on the polyscope screen, update the default keyboard
+# https://www.universal-robots.com/articles/ur/application-installation/changing-the-console-keyboard-layout/
+# send the string with the command:
+# socket_send_string("string to send", "socket_name")
+## !!IMPORTANT!!
+# in order to have the camera process the commands, you must "press enter" so that the DataMan executes the command
+# to do so, send ASCII bytes 13 and then 10, coresponding to CR and LF (carrige return and line feed)
+# send the bytes with the following command:
+# socket_send_byte(int_value, "socket_name")
+
+# example commands to trigger the top camera for two seconds:
+# socket_send_string("||>TRIGGER ON", "TopCamSocket") 
+# socket_send_byte(13, "TopCamSocket")
+# socket_send_byte(10, "TopCamSocket")
+# sleep(2.0)
+# socket_send_string("||>TRIGGER OFF", "TopCamSocket") 
+# socket_send_byte(13, "TopCamSocket")
+# socket_send_byte(10, "TopCamSocket")
+
+# the bottom camera is an image-sticking camera that tracks the conveyor speed. 
+# the on/off trigger should be tied to when the the parcel is passing over the gap. 
+# this can be detected by the light curtain between the two conveyors.
+# trigger the camera when the sensor goes high, and stop the trigger when the sensor goes low
+
+# you can read strings back from the cameras. This is useful for testing. In production, the strings will be sent directly to the sort server.
+# the command to read a string is:
+# socket_read_string("socket_name")
+# example command: (call this after finishing the top cam trigger sequence, and then wait maybe 100ms so that the camera can process its image)
+# TopCamData = socket_read_string("TopCamSocket")
+
+##########################################
+## Functions #############################
+##########################################
+
+# this function connects to the cameras
+def connect_to_cams():
+  # function variables
+  local socketOpenLoopVar = False
+  local socketRetryThreshold = 5
+  
+  # open side cam1 
+  global SideCam1SocketInit = False
+  local open_attempt_num = 0
+  while(socketOpenLoopVar == False):
+    SideCam1SocketInit = socket_open("192.168.0.10", 23, "SideCam1Socket")
+    if (SideCam1SocketInit==False): # if open was unsuccessful, get ready to try again
+      socketOpenLoopVar=False
+      open_attempt_num = open_attempt_num +1
+    else:
+      socketOpenLoopVar=True 
+    end
+    if (open_attempt_num>socketRetryThreshold): # check against retry threshold
+      socketOpenLoopVar=True
+    end
+    sync()
+  end
+
+  # open side cam2
+  global SideCam2SocketInit = False
+  local open_attempt_num = 0
+  while(socketOpenLoopVar == False): 
+    SideCam2SocketInit = socket_open("192.168.0.11", 23, "SideCam2Socket")
+    if (SideCam2SocketInit==False): # if open was unsuccessful, get ready to try again
+      socketOpenLoopVar=False
+      open_attempt_num = open_attempt_num + 1
+    else:
+      socketOpenLoopVar=True 
+    end
+    if (open_attempt_num>socketRetryThreshold): # check against retry threshold
+      socketOpenLoopVar=True
+    end
+    sync()
+  end
+
+  # open top cam
+  global TopCamSocketInit = False
+  local open_attempt_num = 0
+  while(socketOpenLoopVar == False): 
+    TopCamSocketInit = socket_open("192.168.0.12", 23, "TopCamSocket")
+    if (TopCamSocketInit==False): # if open was unsuccessful, get ready to try again
+      socketOpenLoopVar=False
+      open_attempt_num = open_attempt_num + 1
+    else:
+      socketOpenLoopVar=True 
+    end
+    if (open_attempt_num>socketRetryThreshold): # check against retry threshold
+      socketOpenLoopVar=True
+    end
+    sync()
+  end
+  
+  # open bottom cam
+  global BottomCamSocketInit = False
+  local open_attempt_num = 0
+  while(socketOpenLoopVar == False): 
+    BottomCamSocketInit = socket_open("192.168.0.11", 23, "BottomCamSocket")
+    if (BottomCamSocketInit==False): # if open was unsuccessful, get ready to try again
+      socketOpenLoopVar=False
+      open_attempt_num = open_attempt_num + 1
+    else:
+      socketOpenLoopVar=True 
+    end
+    if (open_attempt_num>socketRetryThreshold): # check against retry threshold
+      socketOpenLoopVar=True
+    end
+    sync()
+  end
+
+  # check for unsuccessful connections and do popups if needed
+  if (SideCam1SocketInit==False):
+    popup("Could not connect to side cam 1", "Message", False, False, blocking=True)
+  end
+  if (SideCam2SocketInit==False):
+    popup("Could not connect to side cam 2", "Message", False, False, blocking=True)
+  end
+  if (TopCamSocketInit==False):
+    popup("Could not connect to top cam", "Message", False, False, blocking=True)
+  end
+  if (BottomCamSocketInit==False):
+    popup("Could not connect to bottom cam", "Message", False, False, blocking=True)
+  end
+end
+
+# this function turns on the side cameras for a default time of 2.5 seconds
+def side_scan(t=2.5):
+  local sleep_time=t
+  socket_send_string("||>TRIGGER ON", "SideCam1Socket") 
+  socket_send_byte(13, "SideCam1Socket")
+  socket_send_byte(10, "SideCam1Socket")
+  socket_send_string("||>TRIGGER ON", "SideCam2Socket") 
+  socket_send_byte(13, "SideCam2Socket")
+  socket_send_byte(10, "SideCam2Socket")
+  sleep(sleep_time) 
+  socket_send_string("||>TRIGGER OFF", "SideCam1Socket") 
+  socket_send_byte(13, "SideCam1Socket")
+  socket_send_byte(10, "SideCam1Socket")
+  socket_send_string("||>TRIGGER OFF", "SideCam2Socket") 
+  socket_send_byte(13, "SideCam2Socket")
+  socket_send_byte(10, "SideCam2Socket")
+  sync()
+end
+
+# this function turns on the top camera for a default time of 1 second
+def top_scan(t=1.0):
+  local sleep_time=t 
+  socket_send_string("||>TRIGGER ON", "TopCamSocket") 
+  socket_send_byte(13, "TopCamSocket")
+  socket_send_byte(10, "TopCamSocket")
+  sleep(sleep_time)
+  socket_send_string("||>TRIGGER OFF", "TopCamSocket") 
+  socket_send_byte(13, "TopCamSocket")
+  socket_send_byte(10, "TopCamSocket")
+  sync() 
+end
+
+############################
+
+# open a single camera with retries
+# arguments ip_address and SocName need to be strings
+def myCamOpenFunction(ip_address, SocName):
+    # function variables
+    local socketOpenLoopVar = False    # loop control variable
+    local socketRetryThreshold = 5     # retry threshold
+    global CamSocketInit = False    # establish if the socket was opened
+    local open_attempt_num = 0    # loop counter
+    
+    # open the socket to the camera, with retries
+    while(socketOpenLoopVar == False):
+      CamSocketInit = socket_open(ip_address, 23, SocName)
+      if (CamSocketInit==False): # if open was unsuccessful, get ready to try again
+        socketOpenLoopVar=False    # confirm that opening was unsuccessful 
+        open_attempt_num = open_attempt_num +1    # increment attempt number
+      else:
+        socketOpenLoopVar=True    # exit the loop if connection is true 
+      end
+      if (open_attempt_num>socketRetryThreshold): # check against retry threshold
+        socketOpenLoopVar=True    # exit the loop if number of attempts exceeds threshold
+      end
+      sync()    # prevent runtime errors
+    end
+  
+  # check for unsuccessful connections and do popups if needed
+  if (CamSocketInit==False):
+    popup("Could not connect to camera ", "Message Title", False, False, blocking=True)
+  end
+
+  return CamSocketInit    # return the true/false result of opening the socket
+end

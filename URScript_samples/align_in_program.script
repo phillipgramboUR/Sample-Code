@@ -1,0 +1,40 @@
+# replicating the Align function in script
+# snap the tool to be aligned with the base, but dont rotate about z
+# by Phillip Grambo | UR Apps Engineer
+# pgra@universal-robots.com
+
+# call the function align_TCPz_to_base_z in the program to align the tool z with the base z
+
+def align_TCPz_to_base_z(a=0.25, v=0.1):
+    # get the starting info
+    local start_pose = get_actual_tcp_pose()
+    local start_joints = get_actual_joint_positions()
+
+    # extract current rotation info, in rotvec and rpy notation
+    local initial_rotation_rotvec = [start_pose[3], start_pose[4], start_pose[5]]
+    local initial_rotation_rpy = rotvec2rpy(initial_rotation_rotvec)
+
+    # calculate an intermediate position where tool XYZ is aligned with base XYZ, 
+    # but rotate about base x 180 degrees to point down
+    local new_pose_xyzAligned = p[start_pose[0], start_pose[1], start_pose[2], d2r(180), 0, 0]
+
+    # find the RPY of the pose that was just calculated
+    local new_pose_xyzAligned_rotation_rotvec = [new_pose_xyzAligned[3], new_pose_xyzAligned[4],new_pose_xyzAligned[5]]
+    local new_pose_xyzAligned_rotation_rpy = rotvec2rpy(new_pose_xyzAligned_rotation_rotvec)
+
+    # overwrite the z roation with the initial z rotation value
+    local final_rotation_rpy = new_pose_xyzAligned_rotation_rpy
+    final_rotation_rpy[2] = initial_rotation_rpy[2]
+
+    # reassemble the final rotation into rotvec form
+    local final_rotation_rotvec = rpy2rotvec(final_rotation_rpy)
+
+    # assemble the target pose
+    local target_pose = p[start_pose[0], start_pose[1], start_pose[2], final_rotation_rotvec[0], final_rotation_rotvec[1], final_rotation_rotvec[2]]
+
+    # move to the position
+    align_acc = a        # in m/s/s
+    align_vel = v        # in m/s
+    movel(target_pose, align_acc, align_vel)
+
+end

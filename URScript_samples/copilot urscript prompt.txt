@@ -1,0 +1,64 @@
+copilot urscript prompt
+copy/paste the below into the beginning of the session:
+##########################
+
+For this session, pretend you are a programmer writing code in URScript, which is the language for UR robots. It is most similar to Python, but has some distinct syntax differences. Some common python functions may not exist in urscript, so check the manual to confirm they exist before using them, and write them from scratch if needed.
+
+Here are some reference pdfs. Read them thoroughly before we begin:
+
+Script Manual: https://s3-eu-west-1.amazonaws.com/ur-support-site/225539/scriptmanualG5_.pdf
+Script library tutorial: https://s3-eu-west-1.amazonaws.com/ur-support-site/214433/Script_Library_Tutorial.pdf
+
+To learn from previous tries, here is an example of some code that is correct:
+
+def bubble_sort_waypoints(my_waypoints):
+  local n = size(my_waypoints)
+  local i = 0
+  while i < n:
+      local j = 0
+      while j < n - i - 1:
+          if my_waypoints[j][0] > my_waypoints[j + 1][0]:
+              # Swap if the element found is greater than the next element
+              local temp = my_waypoints[j]
+              my_waypoints[j] = my_waypoints[j + 1]
+              my_waypoints[j + 1] = temp
+          end
+          j = j + 1
+      end
+      i = i + 1
+  end
+  return my_waypoints
+end
+
+# to test:
+global some_waypoints = [
+    p[0.5, 0.2, 0.3, 0, 3.14, 0],
+    p[0.1, 0.4, 0.2, 0, 3.14, 0],
+    p[0.3, 0.1, 0.5, 0, 3.14, 0]
+]
+
+sorted_waypoints = bubble_sort_waypoints(some_waypoints)
+popup(to_str(sorted_waypoints))
+
+This was the first result, which had several errors.
+def bubble_sort_waypoints(waypoints):
+    n = len(waypoints)
+    for i in range(n):
+        for j in range(0, n-i-1):
+            if waypoints[j][0] > waypoints[j+1][0]:
+                # Swap if the element found is greater than the next element
+                waypoints[j], waypoints[j+1] = waypoints[j+1], waypoints[j]
+    return waypoints
+
+# Example usage
+waypoints = [(3, 2, 1), (1, 4, 5), (2, 3, 6)]
+sorted_waypoints = bubble_sort_waypoints(waypoints)
+print(sorted_waypoints)
+
+
+Please be careful to correct syntax, and use only functions that you have confirmed are in the manual. Once you have figured out a possible answer to a prompt, check that  the functions are valid before responding.
+
+Its also good practice to use local variables inside a function. 
+
+First, to test, write a urscript function that will takes in a float, and creates a popup with the value of the argument to the third power. If the argument is negative, instead have the popup say that the entry is invalid.
+

@@ -1,0 +1,127 @@
+def debounce_force():
+  global _hidden_verificationVariable=0
+  step_count_81a69023_f211_4f02_886f_b20b5a97cacb = 0.0
+  thread Step_Counter_Thread_3bd694f0_b332_455e_afed_dfdd6b81a4aa():
+    while (True):
+      step_count_81a69023_f211_4f02_886f_b20b5a97cacb = step_count_81a69023_f211_4f02_886f_b20b5a97cacb + 1.0
+      sync()
+    end
+  end
+  run Step_Counter_Thread_3bd694f0_b332_455e_afed_dfdd6b81a4aa()
+  set_tcp(p[0.0,0.0,0.086,0.0,0.0,0.0])
+  set_safety_mode_transition_hardness(1)
+  set_standard_analog_input_domain(0, 1)
+  set_standard_analog_input_domain(1, 1)
+  set_tool_analog_input_domain(0, 1)
+  set_tool_analog_input_domain(1, 1)
+  set_analog_outputdomain(0, 0)
+  set_analog_outputdomain(1, 0)
+  set_input_actions_to_default()
+  set_gravity([0.0, 0.0, 9.82])
+  set_target_payload(1.620000, [0.000000, 0.000000, 0.028000], [0.003440, 0.003440, 0.003440, 0.000000, 0.000000, 0.000000])
+  set_tool_communication(False, 115200, 0, 1, 1.5, 3.5)
+  set_tool_output_mode(0)
+  set_tool_digital_output_mode(0, 1)
+  set_tool_digital_output_mode(1, 1)
+  set_tool_voltage(0)
+  # begin: URCap Installation Node
+  #   Source: External Control, 1.0.5, FZI Research Center for Information Technology
+  #   Type: External Control
+  # end: URCap Installation Node
+  while (True):
+    $ 2 "Robot Program"
+    $ 3 "numbers to initialize"
+    $ 4 "'put this in the before start sequence'"
+    # 'put this in the before start sequence'
+    $ 5 "fx_thresh≔20"
+    global fx_thresh=20
+    $ 6 "fy_thresh≔15"
+    global fy_thresh=15
+    $ 7 "fz_thresh≔10"
+    global fz_thresh=10
+    $ 8 "f_count_thresh≔10"
+    global f_count_thresh=10
+    $ 9 "fx_count≔0"
+    global fx_count=0
+    $ 10 "fy_count≔0"
+    global fy_count=0
+    $ 11 "fz_count≔0"
+    global fz_count=0
+    $ 12 "fx_contact≔ False "
+    global fx_contact=  False  
+    $ 13 "fy_contact≔ False "
+    global fy_contact=  False  
+    $ 14 "fz_contact≔ False "
+    global fz_contact=  False  
+    $ 15 "measurement "
+    $ 16 "'force measuring and contact detection thread, put this in a thread'"
+    # 'force measuring and contact detection thread, put this in a thread'
+    $ 17 "raw_force≔get_tcp_force()"
+    global raw_force= get_tcp_force ()
+    $ 18 "f_x≔raw_force[0]"
+    global f_x=raw_force[0]
+    $ 19 "f_y≔raw_force[1]"
+    global f_y=raw_force[1]
+    $ 20 "f_z≔raw_force[2]"
+    global f_z=raw_force[2]
+    $ 21 "x"
+    $ 22 "If norm(f_x)≥fx_thresh"
+    if (norm(f_x) >= fx_thresh):
+      $ 23 "fx_count≔fx_count+1"
+      global fx_count=fx_count+1
+    else:
+      $ 24 "Else" "noBreak"
+      $ 25 "fx_count≔0"
+      global fx_count=0
+    end
+    $ 26 "If fx_count≥f_count_thresh"
+    if (fx_count >= f_count_thresh):
+      $ 27 "fx_contact≔ True "
+      global fx_contact=  True  
+    else:
+      $ 28 "Else" "noBreak"
+      $ 29 "fx_contact≔ False "
+      global fx_contact=  False  
+    end
+    $ 30 "y"
+    $ 31 "If norm(f_y)≥fy_thresh"
+    if (norm(f_y) >= fy_thresh):
+      $ 32 "fy_count≔fy_count+1"
+      global fy_count=fy_count+1
+    else:
+      $ 33 "Else" "noBreak"
+      $ 34 "fy_count≔0"
+      global fy_count=0
+    end
+    $ 35 "If fy_count≥f_count_thresh"
+    if (fy_count >= f_count_thresh):
+      $ 36 "fy_contact≔ True "
+      global fy_contact=  True  
+    else:
+      $ 37 "Else" "noBreak"
+      $ 38 "fy_contact≔ False "
+      global fy_contact=  False  
+    end
+    $ 39 "z"
+    $ 40 "If norm(f_z)≥fz_thresh"
+    if (norm(f_z) >= fz_thresh):
+      $ 41 "fz_count≔fz_count+1"
+      global fz_count=fz_count+1
+    else:
+      $ 42 "Else" "noBreak"
+      $ 43 "fz_count≔0"
+      global fz_count=0
+    end
+    $ 44 "If fz_count≥f_count_thresh"
+    if (fz_count >= f_count_thresh):
+      $ 45 "fz_contact≔ True "
+      global fz_contact=  True  
+    else:
+      $ 46 "Else" "noBreak"
+      $ 47 "fz_contact≔ False "
+      global fz_contact=  False  
+    end
+    $ 48 "sync()"
+    sync()
+  end
+end

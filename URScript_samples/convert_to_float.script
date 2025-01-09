@@ -1,0 +1,303 @@
+# function for converting string to a float
+# (and supporting functions)
+# Phillip Grambo | pgra@universal-robots.com
+
+# what behavior is wanted when the argument can't be converted to a float?
+# - return an empty/null 
+# --- will cause code to stop executing when called incorrectly
+# - return return an unusual number (-1*(2^32))
+# ---- will cause some odd behavior that should be easy to catch, but forces users to dourble check what they get back from the function
+# - return a list of two arguments, one of which is true/false and the other is the result
+# --- makes it so that someone has to create a list of two items, then check an index for success criteria based on if the first index is +1 or -1
+# --- more cumbersome to call, but handles errors directly
+# --- a top level function could call this, and process result differently: str2flt()
+# TODO: treat a comma as a decimal (support for european usage) (does this actually happen?)
+
+#  example usage arguments and what they return
+#   arg             |  "0"  |  "-12.897"  | "abc123" |
+# str2flt(arg)      |   0   | -12.897     | -65335   |
+# str_to_float(arg) | [1,0] | [1,-12.897] | [-1,0]   |
+
+# quick and eascy converter
+def str2flt(my_str):
+    local tmp_lst=str_to_float(my_str)
+    local my_result=0
+    if (tmp_lst[0]==1):
+        # conversion worked
+        my_result=tmp_lst[1]
+    else:
+        # conversion failed
+        my_result=-65535
+    end
+    return my_result
+end
+
+# string to float converter that returns a list with the success criteria and the float
+def str_to_float(input):
+    # initialize things as needed
+    local arg = to_str(input)
+    local string_can_be_converted = True
+    local error_message = "n/a"
+    local is_negative = False
+
+    # step 1: find length
+    local my_len=str_len(arg)
+
+    # Step2: if length exceeds the number of characters in 2^128, then dont proceed
+    if (my_len>38):
+        string_can_be_converted = False
+        error_message="string is too long"
+    end
+
+    # step 3: parse string into individual characterss 
+    if (string_can_be_converted==True):
+        local placeholder_char_list = make_list(my_len,"0")
+        local i=0
+        while i < my_len:
+          placeholder_char_list[i]=str_sub(arg,i,1)
+          i=i+1
+        end
+    end
+  
+    # step 4: remove leading/training whitespace
+    if (string_can_be_converted==True):
+        # leading whitespace
+        local leading_whitespace=True
+        while (leading_whitespace == True):
+            local my_char = placeholder_char_list[0]
+            if (my_char== " "):
+              placeholder_char_list.remove(0)
+            else:
+                leading_whitespace=False
+            end
+        end
+        # trailing whitespace
+        local trailing_whitespace=True
+        while (trailing_whitespace==True):
+            local j=length(placeholder_char_list)
+            local my_char = placeholder_char_list[j-1]
+            if (my_char==" "):
+                placeholder_char_list.remove(j-1)
+            else:
+                trailing_whitespace=False
+            end         
+        end
+        # if list is now empty, dont continue
+        my_len=length(placeholder_char_list)
+        if (my_len==0):
+            string_can_be_converted=False
+        end
+    end
+
+    # step 5: check for negative numbers
+    if (string_can_be_converted==True):
+        local leading_char = str_sub(arg,0,1)
+        if (leading_char=="-"):
+          is_negative=True
+          # make a version of the input without the leading negative sign
+          # local char2=str_sub(arg,1,1) # old, remove later
+          # local tmp = str_sub(arg,char2,(str_len(arg)-1)) # old, remove later
+          placeholder_char_list.remove(0) # removes index 0 from the list, in this case the negative sign
+          # arg=tmp # old, remove later
+          # my_len=str_len(arg) # old, remove later
+          my_len=length(placeholder_char_list)
+        end
+    end
+
+
+    # step 6: search for invalid characters
+    if (string_can_be_converted==True):
+        local my_char = "a"
+        local i=0
+        my_len=length(placeholder_char_list)
+        while i < my_len:
+            # compare individual character to list of ok characters
+            my_char=placeholder_char_list[i]
+            if (can_char_be_a_float(my_char)==False):
+                string_can_be_converted=False
+                error_message="string contains invalid characters"
+                # todo: add the invalid characters to a new list, and put it into the error message
+            end
+            i=i+1
+        end
+    end
+ 
+    # step 7: count number of decimal points
+    if (string_can_be_converted==True):
+        local num_of_decimal_points=0
+        local i=0
+        while i < my_len:
+          if (placeholder_char_list[i]=="."):
+            num_of_decimal_points=num_of_decimal_points+1
+          end
+          i=i+1
+        end
+        # throw error if more than 1 decimal point
+        if (num_of_decimal_points>1):
+            string_can_be_converted=False
+            error_message="string contains more than one decimal points"
+        end    
+    end
+
+    # step 8: identify decimal point location and break up string list, if needed
+    if (string_can_be_converted==True):
+        if (num_of_decimal_points==1):
+            # find decimal location
+            local i=0
+            local decimal_location = my_len+1
+            while i < my_len:
+              if (placeholder_char_list[i]=="."):
+                decimal_location=i
+              end
+              i=i+1
+            end
+
+            # make two lists for, one for before the decimal, one for after
+            local placeholder_char_list_front = make_list((decimal_location),"a")  # was (decimal_location-1), should remove the -1
+            local placeholder_char_list_back =make_list((my_len-decimal_location-1), "a")  # was (my_len-decimal_location), should add a -1
+
+            # put the characters from the first list into the sub lists
+            # first list
+            local i=0
+            while i < length(placeholder_char_list_front):
+                placeholder_char_list_front[i]=placeholder_char_list[i]
+              i=i+1
+            end
+            # second list
+            local i=0
+            while i < length(placeholder_char_list_back):
+              placeholder_char_list_back[i]=placeholder_char_list[i+decimal_location+1]  # placeholder_char_list[i+decimal_location] needs to be placeholder_char_list[i+decimal_location+1]
+              i=i+1
+            end
+        else:
+            # put everything in the front list, to make the next function easier to write
+            local placeholder_char_list_front=placeholder_char_list
+            local placeholder_char_list_back = ["0","0"]   
+        end     
+    end
+
+
+    # step 9: initialize list(s) for individual results to go in
+    if (string_can_be_converted==True):
+        local placeholder_int_list_front = make_list(length(placeholder_char_list_front),0)
+        local placeholder_int_list_back = make_list(length(placeholder_char_list_back),0)
+    end
+    
+    # step 10: convert individual elements
+    if (string_can_be_converted==True):
+        # before the decimal
+        local i=0
+        while i < length(placeholder_int_list_front):
+          my_char=placeholder_char_list_front[i]
+          placeholder_int_list_front[i]=str_char_to_int(my_char)
+          i=i+1
+        end
+        # after the decimal
+        local i=0
+        while i < length(placeholder_int_list_back):
+          my_char=placeholder_char_list_back[i]
+          placeholder_int_list_back[i]=str_char_to_int(my_char)
+          i=i+1
+        end   
+    end    
+
+    # step 11: convert items into floats and add them together
+    if (string_can_be_converted==True):
+        # before the decimal
+        local pre_decimal_ans=0.0
+        local i=0
+        while i < length(placeholder_int_list_front):
+          local tmp = placeholder_int_list_front[i] * pow(10,(length(placeholder_int_list_front)-i)-1)
+          pre_decimal_ans=pre_decimal_ans + tmp
+          i=i+1
+        end
+        
+        # after the decimal
+        local post_decimal_ans=0.0
+        local i=0
+        while i < length(placeholder_int_list_back):
+          local tmp = placeholder_int_list_back[i] * pow(10,(length(placeholder_int_list_back)-i)-1)
+          post_decimal_ans=post_decimal_ans + tmp
+          i=i+1
+        end
+        # shift the decimal point to the front
+        post_decimal_ans=post_decimal_ans * pow(10, (-1*length(placeholder_int_list_back))) 
+        # add the answers together
+        local my_float = pre_decimal_ans + post_decimal_ans  
+        # check negative condition
+        if (is_negative==True):
+          my_float=-1*my_float
+        end 
+    end
+
+    # step 12: return result 
+    # cannot retun a struct, and lists must be of only one variable type
+    if (string_can_be_converted==True):
+        local result=[1,my_float]
+    else:
+        local result=[-1,0]
+        # make a global string with the erorr message
+        global str2fltCnvrtErr = "string conversion error: " + to_str(input) + " failed to convert because " + error_message
+    end
+    return result
+end
+
+# this function checks if an idividual character can be part of a float
+def can_char_be_a_float(c):
+    local tmp=False
+    if (c=="0"):
+        tmp=True
+    elif (c=="1"):
+        tmp=True
+    elif (c=="2"):
+        tmp=True
+    elif (c=="3"):
+        tmp=True
+    elif (c=="4"):
+        tmp=True
+    elif (c=="5"):
+        tmp=True
+    elif (c=="6"):
+        tmp=True
+    elif (c=="7"):
+        tmp=True
+    elif (c=="8"):
+        tmp=True
+    elif (c=="9"):
+        tmp=True
+    elif (c=="."):
+        tmp=True
+    end
+    return tmp
+end
+
+# this function converts an individual string char to an int for 0-9
+def str_char_to_int(c):
+    local tmp=0
+    if (c=="0"):
+        tmp=0
+    elif (c=="1"):
+        tmp=1
+    elif (c=="2"):
+        tmp=2
+    elif (c=="3"):
+        tmp=3
+    elif (c=="4"):
+        tmp=4
+    elif (c=="5"):
+        tmp=5
+    elif (c=="6"):
+        tmp=6
+    elif (c=="7"):
+        tmp=7
+    elif (c=="8"):
+        tmp=8
+    elif (c=="9"):
+        tmp=9
+    elif (c=="."):
+        tmp="."
+    else:
+      tmp=999
+    end
+    return tmp
+end

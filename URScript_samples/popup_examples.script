@@ -1,0 +1,33 @@
+# Popup() examples for manipulating how strings are displayed
+# Phillip Grambo | pgra@universal-robots.com
+# all effects based on PolyScope 5. Polyscope 3 or X may display differently.
+# invalid html/css tags produce no effect
+### incorrect argument sytax produces errors and prevents robot programs from running 
+
+def popup_examples():
+    local var_1 = "Example Text"
+    # this function will product a series of popups with different formatting
+
+    popup("<b>"+var_1) #bold
+    popup("<i>"+var_1) #italic
+    popup("<u>"+var_1) #underline
+    
+    popup(var_1+"<br>"+var_1) #multiline
+
+    # for these, the `a` in "<a style..." is just an unused letter
+    # if the letter has a predefined effect, then the style effects are combined
+    # other unused letter(s): c, d, bd, etc
+    popup("<a style='font-size:24'>"+var_1) # set font size to 24 (default font size is 16)
+    popup("<a style='color:red'>"+var_1) # set text color to red
+
+    popup("<b><u>"+var_1+"</b>"+var_1) # makes the first arg bold and underline, and the second only underlined
+
+    # </> ends all proceeding effects
+    popup("<b><u>"+var_1+"</>"+var_1) # makes the first arg bold and underline, and the second has no effects
+
+    # headline (h1 through h6)
+    popup("<h1>"+var_1) # applies headline effect (h1: bold, size 24 font, and appends two line breaks)
+    ## h3 is approximately the same size a regular text
+    ## h4 through h6 produces smaller text
+
+end

@@ -1,3 +1,5 @@
+# the script manual contains the function to_num(str), which natively covers the features recreated below
+
 # function for converting string to a float
 # (and supporting functions)
 # Phillip Grambo | pgra@universal-robots.com

@@ -1,0 +1,21 @@
+def myfunction():
+    # note that the name of the function in the above line is irrelavent in this example
+    # the filename is what is callled by the python function
+    # all code to be sent must be contained within a major function
+
+    # move up and down 100mm
+    start_pos = get_actual_tcp_pose()
+    lifted_pos = start_pos
+    lifted_pos[2]=lifted_pos[2]+0.1
+    movel(lifted_pos, v=0.1)
+    movel(start_pos, v=0.1)
+
+    # functions can be defined and called within the multiline stream, example is below
+    def myFun(arg):
+        movel(pose_add(get_actual_tcp_pose(),p[0,0,arg/1000,0,0,0]), v=0.1)
+        movel(pose_add(get_actual_tcp_pose(),p[0,0,-arg/1000,0,0,0]), v=0.1)
+    end
+    myFun(25) # move up and down 25mm
+
+    # TODO: example of embeding a thread in this file
+end  

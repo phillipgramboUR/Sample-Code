@@ -1,0 +1,19 @@
+# set up thread
+thread myTestThread():
+    while(True):
+        # code for the thread to do:
+        set_standard_digital_out(1, True)
+        sleep(0.5)
+        set_standard_digital_out(1, False)
+        sleep(0.5)
+    end
+    sync()      
+end
+
+# run the thread
+myThreadController = run myTestThread()
+
+# to kill the thread, use this line:
+kill myThreadController
+
+

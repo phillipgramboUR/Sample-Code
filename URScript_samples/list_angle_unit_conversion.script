@@ -1,0 +1,26 @@
+# convert all entries in a list from degrees to radians and back
+# Phillip Grambo | pgra@universal-robots.com
+
+def list_d2r(arg):
+  # convert a list from degrees to radians
+  local arg_length = length(arg)
+  local tmp_list = make_list(arg_length, 0)
+  local i=0
+  while i < arg_length:
+    tmp_list[i]=d2r(arg[i])
+    i=i+1
+  end
+  return tmp_list
+end
+
+def list_r2d(arg):
+  # convert a list from radians to degrees
+  local arg_length = length(arg)
+  local tmp_list = make_list(arg_length, 0)
+  local i=0
+  while i < arg_length:
+    tmp_list[i]=r2d(arg[i])
+    i=i+1
+  end
+  return tmp_list
+end

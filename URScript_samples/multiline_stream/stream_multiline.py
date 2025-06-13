@@ -15,10 +15,10 @@ try:
     s.connect((HOST, PORT))
     junk=s.recv(1024)
     # Open the file in binary append mode to put in a last \n
-    with open("script_to_stream.script", "ab") as f:
+    with open("multiline_script.script", "ab") as f:
         f.write(b'\n')
     # Now open the file in binary read mode and proceed to stream it
-    with open("script_to_stream.script", "rb") as f:
+    with open("multiline_script.script", "rb") as f:
         abc = f.read(1024)
         while abc:
             s.sendall(abc)

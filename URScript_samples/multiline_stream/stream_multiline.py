@@ -22,6 +22,7 @@ try:
         abc = f.read(1024)
         while abc:
             s.sendall(abc)
+            junk=s.recv(1024)
             abc = f.read(1024)
     junk=s.recv(1024)
     s.close()

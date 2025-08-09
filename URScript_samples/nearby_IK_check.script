@@ -1,0 +1,87 @@
+# function for checking if a pose is near an unreachable pose or near a singularity
+# Phillip Grambo | AE, Universal Robots | pgra@universal-robots.com
+
+def nearby_IK_ok(target_location=get_actual_tcp_pose(),dist_mm=50,t=0.5,speed=get_actual_tcp_speed()):
+    # prepare result
+    local result=True
+    # convert Units
+    local dist=dist_mm/1000
+    # find current pos
+    local location = target_location
+    # find places to check (distance, speed, and current)
+    # cartesian offsets
+    local x_pos = pose_add(location,p[dist,0,0,0,0,0])
+    local x_neg = pose_add(location,p[-dist,0,0,0,0,0])
+    local y_pos = pose_add(location,p[0,dist,0,0,0,0])
+    local y_neg = pose_add(location,p[0,-dist,0,0,0,0])
+    local z_pos = pose_add(location,p[0,0,dist,0,0,0])
+    local z_neg = pose_add(location,p[0,0,-dist,0,0,0])
+    # check for speed info
+    local my_speed = [get_actual_tcp_speed()[0], get_actual_tcp_speed()[1],get_actual_tcp_speed()[2]]
+    local dist_xyz = t*my_speed
+    local travel_pose = pose_add(p[dist_xyz[0],dist_xyz[1],dist_xyz[2],0,0,0], get_actual_tcp_pose())
+    # make array
+    local poses = [x_pos, x_neg, y_pos, y_neg, z_pos, z_neg, travel_pose, location]
+    # go through loop, evaluate
+    local i=0
+    while i < length(poses):
+        # check poses
+        if not(get_inverse_kin_has_solution(poses[i]) and result==True and is_within_safety_limits(poses[i])):
+            result=False
+        end
+        # also check joints
+        if (result==True):
+            if (get_inverse_kin_has_solution(poses[i])):
+                # get angles and parse
+                local joints_i = get_inverse_kin(poses[i]) 
+                local j0_deg = r2d(joints_i[0]) # base
+                local j1_deg = r2d(joints_i[1]) # shoulder
+                local j2_deg = r2d(joints_i[2]) # elbow
+                local j3_deg = r2d(joints_i[3]) # wrist 1
+                local j4_deg = r2d(joints_i[4]) # wrist 2
+                local j5_deg = r2d(joints_i[5]) # wrist 3
+                local joints_ok = True  # set up final answer
+                # check base
+                if (norm(j0_deg)>350): # upper limit
+                    joints_ok = False
+                end
+                # check shoulder
+                if (norm(j1_deg)>350): # upper limit
+                    joints_ok = False
+                end
+                # check elbow
+                if (norm(j2_deg)<10): # straight sticking it
+                    joints_ok = False
+                end
+                # check wrist1
+                if (norm(j3_deg)>350): # upper limit
+                    joints_ok = False
+                end
+                # check wrist2
+                if (norm(j4_deg)<10) or # wrist alignment singularity
+                    (norm(j4_deg)>350) or # upper limit
+                    ((norm(j4_deg)>170)and(norm(j4_deg)<190)): # wrist alignment singularity
+                    joints_ok = False
+                end
+                # check wrist3
+                if (norm(j5_deg)>350): # upper limit
+                    joints_ok = False
+                end
+                # write result
+                if (joints_ok==False):
+                    result=False
+                end
+            end # end of joint checks
+        end 
+
+        # exit loop check
+        if (result==False):
+            i=length(poses)+10 # so the loop exits
+        end
+        
+      i=i+1
+    end
+
+    # return the boolean
+    return result
+end

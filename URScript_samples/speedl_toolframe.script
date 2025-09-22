@@ -1,0 +1,19 @@
+# speedl in tool frame
+def speedl_tool_frame(tool_speeds, acc, t, alpha=0):
+
+    if (alpha==0):
+        alpha=acc # default to acc if alpha not specified   
+    end
+    local tcp_frame = get_actual_tcp_pose()
+    speed = tool_speeds  
+    local p_tcp = p[0,0,0, tcp_frame[3], tcp_frame[4], tcp_frame[5]]
+
+    local speed_pos_p = p[speed[0], speed[1], speed[2], 0, 0, 0]
+    local speed_rot_p = p[speed[3], speed[4], speed[5], 0, 0, 0]
+
+    local trans = pose_trans(p_tcp, speed_pos_p)
+    local rot = pose_trans(p_tcp, speed_rot_p)
+
+    local resultant = [trans[0], trans[1], trans[2], rot[0], rot[1], rot[2]]
+    speedl(resultant, a=acc, t=t, aRot=alpha)
+end

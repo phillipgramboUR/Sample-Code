@@ -19,6 +19,7 @@ def popup_examples(str="Example Text"):
     # other unused letter(s): c, d, bd, etc
     popup("<a style='font-size:24'>"+var_1, blocking=True) # set font size to 24 (default font size is 16)
     popup("<a style='color:red'>"+var_1, blocking=True) # set text color to red
+    popup("<a style='background-color:red'>"+var_1, blocking=True) # set background color to red
 
     popup("<b><u>"+var_1+"</b>"+var_1, blocking=True) # makes the first arg bold and underline, and the second only underlined
 
@@ -33,3 +34,4 @@ def popup_examples(str="Example Text"):
 end
 # call the function for the example:
 popup_examples()
+

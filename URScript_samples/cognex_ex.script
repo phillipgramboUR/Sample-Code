@@ -1,0 +1,48 @@
+def cognex_native_trigger(IP_STRING, phrase):
+
+    # exaple trigger phrase:    "GVc011"
+    # the 011 is how this example cognex cam was set up, but may need to be changed
+    phrase = "GV"+to_str(phase)
+
+    # initialize temp var
+    local job_dn=[0, 0]
+    # open socket
+    # always use port 23 for telnet
+    local tmp_soc_name = "cognex_native_socket"
+    socket_open(IP_STRING, 23, tmp_soc_name)
+    sleep(.01)
+    # login name
+    socket_send_string("admin", tmp_soc_name)
+    socket_send_byte(13, tmp_soc_name)
+    socket_send_byte(10, tmp_soc_name)
+    sleep(.01)
+    # login pw
+    socket_send_string("", tmp_soc_name)
+    socket_send_byte(13, tmp_soc_name)
+    socket_send_byte(10, tmp_soc_name)
+    sleep(.01)
+    # cognex native command to trigger
+    socket_send_string("sw8", tmp_soc_name)
+    socket_send_byte(13, tmp_soc_name)
+    socket_send_byte(10, tmp_soc_name)
+    # retry loop
+    while (job_dn[1] == 1):
+        job_dn=socket_read_ascii_float(1)
+        sync()
+    end
+    
+    # cognex native command GetValueCell
+    socket_send_string(phrase, tmp_soc_name)
+    sleep(.01)
+    socket_send_byte(13, tmp_soc_name)
+    socket_send_byte(10, tmp_soc_name)
+    # read cell value
+    local Cam_Values=socket_read_ascii_float(3, tmp_soc_name)
+    sync()
+    # close socket, return values
+    socket_close(tmp_soc_name)
+    return Cam_Values
+end
+
+# example usage
+#my_cam_data = cognex_native_trigger("192.168.1.100", 011)

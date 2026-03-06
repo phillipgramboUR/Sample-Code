@@ -1,0 +1,25 @@
+# function for exercising the joints one at a time
+
+def exercise_joints(dist_deg, speed_deg_s):
+  init_joints = get_actual_joint_positions()
+  dist_rad = d2r(dist_deg)
+  speed_rad = d2r(speed_deg_s)
+
+  local i=0
+  while i < (length(init_joints)):
+    # calculate positions
+    joints_pos = init_joints
+    joints_pos[i] = joints_pos[i] + dist_rad
+    joints_neg = init_joints
+    joints_neg[i] = joints_neg[i] - dist_rad
+    # move to positions
+    movej(init_joints, a=1.5, v=speed_rad)
+    movej(joints_pos, a=1.5, v=speed_rad)
+    movej(joints_neg, a=1.5, v=speed_rad)
+    movej(init_joints, a=1.5, v=speed_rad)
+    # increment counter
+    i=i+1
+  end
+
+end
+

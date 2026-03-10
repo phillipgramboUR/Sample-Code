@@ -1,0 +1,61 @@
+# example of socket tcp for a chat to a server
+# intended for use with py_socket_server.py
+# useful for both Polyscope 5 and X
+
+# connection data
+global ex_server_IP = "192.168.0.5"
+global ex_server_port = 1701
+global ex_server_name = "chat_port"
+
+# connection variables
+local retry_count = 0
+local retry_limit = 10
+local retry_delay = 0.25
+local is_connected = False
+local continue_connecting = True
+
+# attempt connection
+while (continue_connecting==True):
+  # attempt to connect
+  is_connected = socket_open(ex_server_IP, ex_server_port, ex_server_name)
+  
+  # logic for retry
+  if (is_connected==False):
+    retry_count = retry_count + 1
+    sleep(retry_delay)
+    if (retry_count >= retry_limit):
+      continue_connecting = False
+    end
+  else:
+    continue_connecting = False
+  end  
+end
+
+# evaluate connection status and print result to log
+if (is_connected==True):
+  textmsg("socket opened at " + ex_server_IP + " on port number " + to_str(ex_server_port))
+else:
+  textmsg("socket failed to open at " + ex_server_IP + " on port number " + to_str(ex_server_port))
+end
+
+# do the chat back and forth if the connection worked
+if (is_connected):
+  while True:
+    # send data
+    local data_to_send = request_string_from_primary_client("enter string to send via socketTCP")
+    sleep(retry_delay)
+    socket_send_string(data_to_send, ex_server_name)
+    sleep(retry_delay)
+    textmsg("sent " + data_to_send + " to " + ex_server_IP + " at " + to_str(ex_server_port))
+    sleep(retry_delay)
+    # recieve data
+    local incomming_data = ""
+    while (incomming_data == ""):
+      incomming_data = socket_read_string(ex_server_name)
+    end
+    textmsg("recieved " + incomming_data + " from " + ex_server_IP + " at " + to_str(ex_server_port))
+    popup(incomming_data, blocking=True)
+    
+  end  
+  socket_close(ex_server_name)
+end

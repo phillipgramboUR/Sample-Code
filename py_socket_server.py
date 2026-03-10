@@ -13,10 +13,11 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
     with conn:
         print(f"Connected by {addr}")
         while True:
-            data = conn.recv(1024)
+            data = conn.recv(1024).decode('utf-8')
             print(data)
             user_input = input("Enter response: ")
             conn.sendall(user_input.encode('utf-8'))
+
 
 
 

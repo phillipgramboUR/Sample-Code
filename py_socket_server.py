@@ -3,6 +3,8 @@
 import socket
 HOST = '192.168.0.5'  # IP of your computer
 PORT = 1701        # Port to listen on 
+print(f"Attempting to make a socket server at {HOST} on {PORT}")
+
 
 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
     s.bind((HOST, PORT))
@@ -15,6 +17,7 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             print(data)
             user_input = input("Enter response: ")
             conn.sendall(user_input.encode('utf-8'))
+
 
 
 

@@ -1,0 +1,177 @@
+# URScript functions for reading/writing a remote CSV file over TCP.
+#
+# These talk to the Python server (server.py) using a simple line protocol:
+#   ROWS                      -> <int>
+#   COLS                      -> <int>
+#   GET,<row>,<col>           -> <value>
+#   SET,<row>,<col>,<value>   -> OK   (or ERR,<msg>)
+#   APPEND,<val1>,<val2>,...  -> OK   (or ERR,<msg>)
+#   PING                      -> PONG (heartbeat / watchdog)
+#
+# Rows/cols are 0-based. Row 0 is the first DATA row (the CSV header is excluded).
+#
+# Usage:
+#   csv_connect()                      # open the socket once
+#   csv_start_watchdog()               # start the connection watchdog thread
+#   rows = csv_get_rows()
+#   cols = csv_get_cols()
+#   v    = csv_get_cell(0, 1)          # returns a string
+#   ok   = csv_set_cell(0, 3, "done")  # returns True on success
+#   ok   = csv_append_row("A103,widget,B4,pending")  # append new row
+#   if (csv_connection_ok):            # check link health any time
+#     ...
+#   end
+#   csv_stop_watchdog()                # stop the watchdog
+#   csv_disconnect()                   # close when finished
+
+# --- Configuration (placeholder; update for your network) --------------------
+global CSV_SERVER_IP   = "192.168.0.123"
+global CSV_SERVER_PORT = 30000
+global CSV_SOCKET_NAME = "csv_socket"
+
+# Watchdog tuning.
+global CSV_HEARTBEAT_INTERVAL = 1.0   # seconds between PINGs (keep < server CLIENT_TIMEOUT)
+global CSV_READ_TIMEOUT       = 2.0   # seconds to wait for any server reply
+
+# Connection health flag, updated by every request and by the watchdog.
+global csv_connection_ok = False
+# Handle for the running watchdog thread (an int once started).
+global csv_watchdog_handle = 0
+# Whether the watchdog thread is currently running.
+global csv_watchdog_running = False
+# Software lock guarding the shared socket. A critical section alone is NOT
+# enough here: per the URScript manual, a critical section is released early
+# when a "time-demanding" command (including socketRead) runs inside it, so the
+# watchdog thread and the main program could still interleave on the socket.
+# We use this boolean as a spin-lock instead; only the short test-and-set is
+# wrapped in enter_critical / exit_critical (which contains no socketRead).
+global csv_busy = False
+
+# Acquire the socket lock (spin until free).
+def csv_lock():
+  local got = False
+  while (not got):
+    enter_critical
+    if (not csv_busy):
+      csv_busy = True
+      got = True
+    end
+    exit_critical
+    if (not got):
+      sleep(0.01)
+    end
+  end
+end
+
+# Release the socket lock.
+def csv_unlock():
+  enter_critical
+  csv_busy = False
+  exit_critical
+end
+
+# Open the connection to the CSV server. Returns True on success.
+def csv_connect():
+  local ok = socket_open(CSV_SERVER_IP, CSV_SERVER_PORT, CSV_SOCKET_NAME)
+  csv_connection_ok = ok
+  if (not ok):
+    popup("Could not connect to CSV server", "CSV", error=True)
+  end
+  return ok
+end
+
+# Close the connection to the CSV server.
+def csv_disconnect():
+  socket_close(CSV_SOCKET_NAME)
+  csv_connection_ok = False
+end
+
+# Send one command line and read back one response line (string).
+# The send+read pair is serialized with csv_lock()/csv_unlock() so the watchdog
+# thread and the main program never interleave their messages on the shared
+# socket. socket_read_string is used (socket_read_line is deprecated); the suffix
+# "\n" marks the end of one reply line. Updates the csv_connection_ok health flag.
+def csv_request(cmd):
+  csv_lock()
+  local ok = socket_send_line(cmd, CSV_SOCKET_NAME)
+  local response = ""
+  if (ok):
+    response = socket_read_string(CSV_SOCKET_NAME, suffix="\n", interpret_escape=True, timeout=CSV_READ_TIMEOUT)
+  end
+  csv_unlock()
+  csv_connection_ok = ok and (response != "")
+  return response
+end
+
+# Number of data rows (header excluded). Returns an integer.
+def csv_get_rows():
+  local response = csv_request("ROWS")
+  return to_num(response)
+end
+
+# Number of columns. Returns an integer.
+def csv_get_cols():
+  local response = csv_request("COLS")
+  return to_num(response)
+end
+
+# Value at data row `row`, column `col` (both 0-based). Returns a string.
+def csv_get_cell(row, col):
+  local cmd = str_cat("GET,", str_cat(to_str(row), str_cat(",", to_str(col))))
+  return csv_request(cmd)
+end
+
+# Set the cell at data row `row`, column `col` to `value` (a string).
+# Returns True if the server replied OK.
+def csv_set_cell(row, col, value):
+  local cmd = str_cat("SET,", str_cat(to_str(row), str_cat(",", str_cat(to_str(col), str_cat(",", value)))))
+  local response = csv_request(cmd)
+  return response == "OK"
+end
+
+# Append a new row to the CSV file with comma-separated values.
+# The `values` argument should be a single string with commas separating each cell value.
+# Example: csv_append_row("A103,widget,B4,pending")
+# Returns True if the server replied OK.
+def csv_append_row(values):
+  local cmd = str_cat("APPEND,", values)
+  local response = csv_request(cmd)
+  return response == "OK"
+end
+
+# --- Watchdog ----------------------------------------------------------------
+# Background thread that monitors the connection. It sends PING every
+# CSV_HEARTBEAT_INTERVAL seconds and expects PONG. A missing/failed reply marks
+# the link as down (csv_connection_ok = False) and triggers a reconnect attempt.
+# The regular PINGs also keep the server's connection watchdog from timing out
+# while the main program is idle.
+thread csv_watchdog_thread():
+  while (True):
+    local response = csv_request("PING")
+    if (response != "PONG"):
+      csv_connection_ok = False
+      textmsg("CSV watchdog: connection lost, reconnecting")
+      csv_lock()
+      socket_close(CSV_SOCKET_NAME)
+      socket_open(CSV_SERVER_IP, CSV_SERVER_PORT, CSV_SOCKET_NAME)
+      csv_unlock()
+    end
+    sleep(CSV_HEARTBEAT_INTERVAL)
+  end
+end
+
+# Start the watchdog thread. Safe to call once after csv_connect().
+def csv_start_watchdog():
+  if (not csv_watchdog_running):
+    csv_watchdog_handle = run csv_watchdog_thread()
+    csv_watchdog_running = True
+  end
+end
+
+# Stop the watchdog thread.
+def csv_stop_watchdog():
+  if (csv_watchdog_running):
+    kill csv_watchdog_handle
+    csv_watchdog_running = False
+  end
+end
